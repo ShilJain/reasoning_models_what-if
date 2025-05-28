@@ -1,0 +1,9 @@
+Customer Name Required Specialization Service Type  Urgency Rating        Location  Estimated Duration (hrs) Customer_Tier
+     John Doe             Maintenance Installation               2           Rural                         4    High
+   Jane Smith           Network Setup Installation               5 Industrial Area                         1	Low
+Michael Brown           Network Setup  Maintenance               1           Rural                         4	Low
+ Lisa Johnson                  Repair  Maintenance               2        Suburban                         3	High
+    Tom Clark           Network Setup      Upgrade               3        Suburban                         4	Low
+   Sara Davis                  Repair  Maintenance               3        Suburban                         4	High
+  Mark Wilson           Network Setup  Maintenance               4           Rural                         1	Low
+   Ann Taylor             Fiber Optic  Maintenance               1        Suburban                         4	High

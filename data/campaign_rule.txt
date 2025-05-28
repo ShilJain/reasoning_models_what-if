@@ -1,0 +1,5 @@
+                Channel  Daily Minimum Spend  Max Campaign Runs
+0      Social Media Ads                 2000                NaN
+1            Search Ads                 3000                NaN
+2  Influencer Marketing                    0                2.0
+3       Email Campaigns                  500                NaN

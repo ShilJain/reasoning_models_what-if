@@ -1,0 +1,44 @@
+<question>
+Today’s date is 01-Apr-25.
+As an appointment scheduler at Contoso Telco, your tasks are:
+Identify the technician appointment requests that should be prioritized based on urgency, service type, location, customer tier and estimated duration.
+Ensure that each type of service (e.g., installation, repair, maintenance) is booked regularly within recommended intervals.
+For each appointment prioritized, provide a detailed rationale explaining why it should be scheduled in that order.
+If a time slot cannot be allocated due to scheduling constraints, call that out in a separate section and recommend the next available slot and alternative arrangements.
+You may adjust working hours for high-priority appointments if required, but aim to minimize changes to regular schedules.
+
+</question>
+
+
+<instructions> 
+Allocate technicians to appointments to optimize specialization matching, travel routing, and minimize customer waiting time. Use the steps below:
+Prioritize the appointments based on urgency, service type, and required skills.
+
+Identify technician specialization and allocate them based on appointment priority and availability.
+Optimize for reduction in total travel and waiting time.
+Prepare the following tables as summary outputs:
+1. Appointment Allocation Table
+technician allocated | specialization | appointment type | customer location | start date/time | end date/time
+2. Technician Utilization Summary Table
+technician | specialization 
+
+⚠️ Note:
+Promote timely appointments for urgent service requests.
+Utilize the technicians with the right skills for the right appointments.
+Ensure compliance with safety and customer care standards.
+Prioritize high value tier customers.
+Understand that each technician is scheduled for a maximum of 4 hrs/day, and can extend to 5 hrs/day with adjustments.
+
+</instructions> 
+
+<background>
+
+Contoso Telco is a major telecommunications provider. You are an appointment scheduler whose job is to allocate technician appointment slots to maximize utilization and customer satisfaction.
+Datasets:
+You are provided with the following:
+Technician List:
+List of technicians with their name and specialization.
+Appointment Request List:
+List of technician appointment requests to be scheduled with customer name, required specialization, service type, urgency rating, location,  estimated duration and customer tier.
+
+</background>
