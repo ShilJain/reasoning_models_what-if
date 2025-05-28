@@ -1,4 +1,4 @@
-# Waht-If Analysis with reasoning models
+# What-If Analysis with reasoning models
 
 This React application demonstrates integration with Azure OpenAI API, featuring a tabbed interface for different use cases. The current implementation includes a "Preventive Maintenance with Resource Optimization" tab where users can input queries and receive AI-powered recommendations.
 
