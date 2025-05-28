@@ -1,7 +1,0 @@
-   Name Specialization    
-  Alice    Maintenance              
-    Bob   Installation              
-Charlie  Network Setup             
-Edward         Repair        
-             
-         
