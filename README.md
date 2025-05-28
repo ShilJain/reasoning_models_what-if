@@ -14,7 +14,7 @@ This React application demonstrates integration with Azure OpenAI API, featuring
 Before running the application, you need to configure your Azure OpenAI credentials:
 
 1. Create an Azure OpenAI Service resource in your Azure account
-2. Deploy a model (e.g., GPT-4 or GPT-3.5-Turbo) 
+2. Deploy a model (e.g., o1, o3, o4-mini) 
 3. Copy your Azure OpenAI endpoint, API key, and deployment name
 4. Update the `.env` file with these values:
    ```
