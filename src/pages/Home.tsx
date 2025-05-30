@@ -6,7 +6,6 @@ import Button from '@mui/material/Button';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-import EventNoteIcon from '@mui/icons-material/EventNote';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import { Link as RouterLink } from 'react-router-dom';
 
