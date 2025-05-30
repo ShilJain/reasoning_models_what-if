@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import Fade from '@mui/material/Fade';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import ConstructionIcon from '@mui/icons-material/Construction';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import DownloadIcon from '@mui/icons-material/Download';
 import { fetchOpenAICompletion } from '../services/openai.service';
@@ -185,7 +184,7 @@ const TechnicianBooking: React.FC = () => {
       setLastElapsed(elapsed);
     }
     return () => clearInterval(timer);
-  }, [loading,elapsed]);
+  }, [loading, elapsed]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
