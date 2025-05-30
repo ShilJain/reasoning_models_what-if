@@ -175,7 +175,7 @@ const BudgetOptimisation: React.FC = () => {
       setLastElapsed(elapsed);
     }
     return () => clearInterval(timer);
-  }, [loading]);
+  }, [loading,elapsed]);
 
   const handleChannelChange = (channel: string) => {
     setSelectedChannels((prev) =>
