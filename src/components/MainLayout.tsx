@@ -6,9 +6,7 @@ import {
   Container, 
   Typography,
   useTheme,
-  useMediaQuery,
-  Divider,
-  Paper
+  useMediaQuery
 } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -112,7 +110,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Modern, bold heading and subheading */}
       <Box sx={{ bgcolor: '#f4f6f8', py: { xs: 4, sm: 6 }, textAlign: 'center' }}>
         <Typography variant="h3" sx={{ fontWeight: 800, mb: 1, letterSpacing: '-1px' }}>
-          AI powered What-if Analysis
+          AI powered What-If Analysis
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto', fontWeight: 400 }}>
           Meet your AI-powered, human-led solutions – Intelligence on tap to optimize your operations.
