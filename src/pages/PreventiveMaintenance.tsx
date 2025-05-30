@@ -179,7 +179,7 @@ const PreventiveMaintenance: React.FC = () => {
       setLastElapsed(elapsed);
     }
     return () => clearInterval(timer);
-  }, [loading]);
+  }, [loading,elapsed]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
