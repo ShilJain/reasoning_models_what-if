@@ -34,7 +34,7 @@ function parseAsciiTableBlock(tableBlock: string) {
   // Find the header: first line with '|' after a separator line
   let headerIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    const isSeparator = /^[-_ ]+$/.test(lines[i]);
+    
     const isTableLine = lines[i].includes('|');
     if (isTableLine && i > 0 && /^[-_ ]+$/.test(lines[i - 1])) {
       headerIdx = i;
