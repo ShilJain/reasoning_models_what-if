@@ -11,167 +11,159 @@ import {
   DialogContent,
   DialogActions,
   LinearProgress,
+  Checkbox,
+  FormGroup,
+  FormControlLabel,
   Table,
-  TableHead,
-  TableRow,
+  TableBody,
   TableCell,
-  TableBody
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import Fade from '@mui/material/Fade';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import { fetchOpenAICompletion } from '../services/openai.service';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 
-// Helper: Parse ASCII table block into headers and rows, using header between dotted lines if present
-function parseAsciiTableBlock(tableBlock: string) {
-  const lines = tableBlock
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line); // keep all lines
+const CHANNELS = [
+  'Social Media',
+  'Email',
+  'SEO',
+  'Paid Ads',
+  'Content',
+  'Influencer',
+  'Events'
+];
 
-  // Find the header: first line with '|' after a separator line
-  let headerIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const isSeparator = /^[-_ ]+$/.test(lines[i]);
-    const isTableLine = lines[i].includes('|');
-    if (isTableLine && i > 0 && /^[-_ ]+$/.test(lines[i - 1])) {
-      headerIdx = i;
-      break;
-    }
-    // Also handle if the block starts with a header (no separator at top)
-    if (isTableLine && i === 0) {
-      headerIdx = i;
-      break;
-    }
-  }
-  if (headerIdx === -1) return null;
+const TASK_OPTIONS = [
+  'Number of days to run the campaign',
+  'Channels to prioritize',
+  'Allocate the budget to maximize reach and conversions',
+  'Scenario simulation for aggressive early spend vs. sustained moderate spend'
+];
 
-  // Remove any separator line(s) immediately after the header
-  let dataStart = headerIdx + 1;
-  while (dataStart < lines.length && /^[-_ ]+$/.test(lines[dataStart])) {
-    dataStart++;
-  }
+/* Helper functions to parse and render the result */
+type Block =
+  | { type: 'text'; content: string }
+  | { type: 'table'; header: string[]; rows: string[][] };
 
-  // Only use lines with '|' after the header as rows, skipping any separator lines
-  const rows: string[][] = [];
-  for (let i = dataStart; i < lines.length; i++) {
-    if (lines[i].includes('|') && !/^[-_ ]+$/.test(lines[i])) {
-      rows.push(lines[i].split('|').map(cell => cell.trim()));
-    }
-  }
+// Check if a line is a divider (e.g. -------- or _______)
+const isDivider = (line: string) => /^(\s*[-_]{3,}\s*)$/.test(line);
 
-  const headers = lines[headerIdx].split('|').map(h => h.trim());
-  return { headers, rows };
-}
-
-// Improved: Split result into text and table blocks
-function splitTextAndTables(result: string) {
+// Parse the result into blocks of text and tables
+function parseResult(result: string): Block[] {
+  const blocks: Block[] = [];
   const lines = result.split('\n');
-  const blocks: { type: 'text' | 'table', content: string }[] = [];
-  let buffer: string[] = [];
-  let inTable = false;
+  let i = 0;
 
-  const flush = (type: 'text' | 'table') => {
-    if (buffer.length) {
-      blocks.push({ type, content: buffer.join('\n') });
-      buffer = [];
-    }
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const isSeparator = /^[-_ ]+$/.test(line);
-    const isTableLine = line.includes('|');
-    if (isTableLine) {
-      if (!inTable) flush('text');
-      inTable = true;
-      buffer.push(line);
-    } else if (isSeparator) {
-      if (inTable) flush('table');
-      inTable = false;
-      buffer.push(line);
+  while (i < lines.length) {
+    // If this line has pipe characters, it might be a table
+    if (lines[i].includes('|')) {
+      const tableLines: string[] = [];
+      
+      // Collect consecutive lines that could be part of a table
+      while (i < lines.length && (lines[i].includes('|') || isDivider(lines[i]))) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      
+      // Filter out dividers and empty lines
+      const cleanLines = tableLines.filter(line => line.trim() && !isDivider(line));
+      
+      // If we have at least a header and one row, it's a valid table
+      if (cleanLines.length >= 2) {
+        const header = cleanLines[0].split('|').map(cell => cell.trim()).filter(Boolean);
+        const rows = cleanLines.slice(1).map(line => 
+          line.split('|').map(cell => cell.trim()).filter(Boolean)
+        );
+        blocks.push({ type: 'table', header, rows });
+      } else {
+        // Not a valid table, treat as text
+        blocks.push({ type: 'text', content: tableLines.join('\n') });
+      }
     } else {
-      if (inTable) flush('table');
-      inTable = false;
-      buffer.push(line);
+      // Collect text lines until we find a potential table
+      const textLines: string[] = [];
+      while (i < lines.length && !lines[i].includes('|')) {
+        textLines.push(lines[i]);
+        i++;
+      }
+      blocks.push({ type: 'text', content: textLines.join('\n') });
     }
   }
-  flush(inTable ? 'table' : 'text');
+  
   return blocks;
 }
 
-// Main render function for results
-const renderFormattedResult = (result: string) => {
-  const blocks = splitTextAndTables(result);
-
+// Component to render the parsed result
+const RenderResult: React.FC<{ content: string }> = ({ content }) => {
+  const blocks = parseResult(content);
+  
   return (
     <Box>
-      {blocks.map((block, idx) => {
-        if (block.type === 'table') {
-          const table = parseAsciiTableBlock(block.content);
-          if (table) {
-            return (
-              <Table
-                key={idx}
-                size="small"
-                sx={{
-                  my: 3,
-                  background: '#fff',
-                  borderRadius: 2,
-                  border: '1px solid #e0e0e0',
-                  '& th, & td': { fontSize: 15, px: 2, py: 1 }
-                }}
-              >
-                <TableHead>
-                  <TableRow>
-                    {table.headers.map((header, hidx) => (
-                      <TableCell key={hidx} sx={{ fontWeight: 700, background: '#f4f6f8' }}>
-                        {header}
-                      </TableCell>
+      {blocks.map((block, index) => 
+        block.type === 'text' ? (
+          // Render text blocks as preformatted text
+          <Box 
+            key={index}
+            sx={{ 
+              whiteSpace: 'pre-wrap', 
+              fontFamily: 'monospace', 
+              fontSize: 16, 
+              mb: 2,
+              color: '#222' 
+            }}
+          >
+            {block.content}
+          </Box>
+        ) : (
+          // Render table blocks as MUI tables
+          <TableContainer key={index} sx={{ mb: 3, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  {block.header.map((cell, i) => (
+                    <TableCell key={i} sx={{ fontWeight: 'bold' }}>
+                      {cell}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {block.rows.map((row, rowIndex) => (
+                  <TableRow key={rowIndex} sx={{ 
+                    '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+                    '&:last-child td': { borderBottom: 0 }
+                  }}>
+                    {row.map((cell, cellIndex) => (
+                      <TableCell key={cellIndex}>{cell}</TableCell>
                     ))}
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {table.rows.map((row, ridx) => (
-                    <TableRow key={ridx}>
-                      {row.map((cell, cidx) => (
-                        <TableCell key={cidx}>{cell}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            );
-          }
-        }
-        // Render text block, preserving line breaks and spacing
-        return (
-          <Typography
-            key={idx}
-            variant="body1"
-            component="div"
-            sx={{ whiteSpace: 'pre-line', my: 2, fontSize: 16 }}
-          >
-            {block.content.trim()}
-          </Typography>
-        );
-      })}
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )
+      )}
     </Box>
   );
 };
 
 const BudgetOptimisation: React.FC = () => {
-  const [input, setInput] = useState('');
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [totalBudget, setTotalBudget] = useState('');
+  const [conversions, setConversions] = useState<{ [channel: string]: string }>({});
+  const [minSpend, setMinSpend] = useState<{ [channel: string]: string }>({});
+  const [maxSpend, setMaxSpend] = useState<{ [channel: string]: string }>({});
+  const [additional, setAdditional] = useState('');
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-  const [constraintsFile, setConstraintsFile] = useState<File | null>(null);
-  const [inputFile, setInputFile] = useState<File | null>(null);
   const [openDialog, setOpenDialog] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [lastElapsed, setLastElapsed] = useState<number | null>(null);
 
-  // Timer for elapsed seconds during loading
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (loading) {
@@ -185,47 +177,63 @@ const BudgetOptimisation: React.FC = () => {
     return () => clearInterval(timer);
   }, [loading]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleChannelChange = (channel: string) => {
+    setSelectedChannels((prev) =>
+      prev.includes(channel)
+        ? prev.filter((c) => c !== channel)
+        : [...prev, channel]
+    );
+  };
+
+  const handleConversionChange = (channel: string, value: string) => {
+    setConversions((prev) => ({ ...prev, [channel]: value }));
+  };
+
+  const handleMinSpendChange = (channel: string, value: string) => {
+    setMinSpend((prev) => ({ ...prev, [channel]: value }));
+  };
+
+  const handleMaxSpendChange = (channel: string, value: string) => {
+    setMaxSpend((prev) => ({ ...prev, [channel]: value }));
+  };
+
+  const handleTaskChange = (task: string) => {
+    setSelectedTasks((prev) =>
+      prev.includes(task)
+        ? prev.filter((t) => t !== task)
+        : [...prev, task]
+    );
+  };
+
+  // Combine prompt generation and optimisation into one button
+  const handleOptimise = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const prompt = `
+You are a marketing strategist at a consumer electronics company launching a new smart home device. You have a fixed budget and want to run a campaign across multiple channels.
+Tasks: ${selectedTasks.join(', ') || 'Not specified'}
+Channels selected: ${selectedChannels.join(', ') || 'None'}
+Total budget: ${totalBudget}
+${selectedChannels
+  .map(
+    (ch) =>
+      `Conversion rate for ${ch}: ${conversions[ch] || 'Not specified'}
+Minimum spend: ${minSpend[ch] || 'Not specified'}
+Maximum spend: ${maxSpend[ch] || 'Not specified'}`
+  )
+  .join('\n')}
+Additional constraints: ${additional || 'None'}
+Suggest an optimal allocation of the total budget across the selected channels to maximize ROI, considering the provided conversion rates, min/max spends, and constraints. Return your answer in a clear format with sections and ASCII tables using pipe characters (|) for columns.
+    `.trim();
+
     try {
-      const response = await fetchOpenAICompletion({ input });
+      const response = await fetchOpenAICompletion({ input: prompt });
       setResult(response.choices[0].message.content);
-      console.log(response.choices[0].message.content);
     } catch (error) {
-      console.error('Error:', error);
       setResult('An error occurred while processing your request.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleFileUpload = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    type: 'constraints' | 'input'
-  ) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (type === 'constraints') {
-        setConstraintsFile(file);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target?.result as string;
-          setInput(prev =>
-            prev +
-            `\n<dataset>\n  <constraints_data>\n${text}\n  </constraints_data>\n</dataset>\n`
-          );
-        };
-        reader.readAsText(file);
-      } else if (type === 'input') {
-        setInputFile(file);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target?.result as string;
-          setInput(text);
-        };
-        reader.readAsText(file);
-      }
     }
   };
 
@@ -267,7 +275,7 @@ const BudgetOptimisation: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            minWidth: { xs: '100%', sm: 1000 },
+            minWidth: { xs: '100%', sm: 500 },
             maxWidth: { xs: '100%', sm: '60vw', md: '50vw' },
             width: '100%'
           }}
@@ -294,114 +302,109 @@ const BudgetOptimisation: React.FC = () => {
             Get AI-powered recommendations for optimizing your marketing campaign budget allocation for maximizing ROI.
           </Typography>
 
-          {/* File Upload Section */}
-          <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap', width: '100%', justifyContent: 'center' }}>
-            {/* Upload Instructions */}
-            <Box>
-              <input
-                type="file"
-                accept=".txt,.csv"
-                style={{ display: 'none' }}
-                id="input-upload"
-                onChange={(e) => handleFileUpload(e, 'input')}
-              />
-              <label htmlFor="input-upload">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<UploadFileIcon />}
-                  sx={{
-                    borderRadius: 99,
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 600,
-                    bgcolor: '#fff',
-                    borderColor: '#e0e0e0',
-                    color: '#222',
-                    textTransform: 'none',
-                    '&:hover': {
-                      bgcolor: '#f4f6f8',
-                      borderColor: '#bdbdbd'
+          {/* Budget Optimisation Form */}
+          <form onSubmit={handleOptimise} style={{ width: '100%' }}>
+            {/* Task as checkbox group */}
+            <FormGroup sx={{ mb: 2 }}>
+              <Typography sx={{ mb: 1, fontWeight: 600 }}>Select Task(s):</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                {TASK_OPTIONS.map((option) => (
+                  <FormControlLabel
+                    key={option}
+                    control={
+                      <Checkbox
+                        checked={selectedTasks.includes(option)}
+                        onChange={() => handleTaskChange(option)}
+                      />
                     }
+                    label={option}
+                  />
+                ))}
+              </Box>
+            </FormGroup>
+
+            {/* Channels as rows with all fields */}
+            <FormGroup sx={{ mb: 2 }}>
+              <Typography sx={{ mb: 1, fontWeight: 600 }}>Channels:</Typography>
+              {CHANNELS.map((channel) => (
+                <Box
+                  key={channel}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    mb: 1,
+                    gap: 2,
+                    bgcolor: selectedChannels.includes(channel) ? '#f4f6f8' : 'transparent',
+                    borderRadius: 1,
+                    px: 1
                   }}
                 >
-                  Upload Instructions
-                </Button>
-              </label>
-              {inputFile && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Selected: {inputFile.name}
-                </Typography>
-              )}
-            </Box>
+                  <Checkbox
+                    checked={selectedChannels.includes(channel)}
+                    onChange={() => handleChannelChange(channel)}
+                  />
+                  <Typography sx={{ width: 120 }}>{channel}</Typography>
+                  <TextField
+                    label="Conversion Rate (%)"
+                    type="number"
+                    value={conversions[channel] || ''}
+                    onChange={(e) => handleConversionChange(channel, e.target.value)}
+                    sx={{ width: 140 }}
+                    inputProps={{ min: 0, max: 100 }}
+                    disabled={!selectedChannels.includes(channel)}
+                  />
+                  <TextField
+                    label="Min Spend"
+                    type="number"
+                    value={minSpend[channel] || ''}
+                    onChange={(e) => handleMinSpendChange(channel, e.target.value)}
+                    sx={{ width: 110 }}
+                    inputProps={{ min: 0 }}
+                    disabled={!selectedChannels.includes(channel)}
+                  />
+                  <TextField
+                    label="Max Spend"
+                    type="number"
+                    value={maxSpend[channel] || ''}
+                    onChange={(e) => handleMaxSpendChange(channel, e.target.value)}
+                    sx={{ width: 110 }}
+                    inputProps={{ min: 0 }}
+                    disabled={!selectedChannels.includes(channel)}
+                  />
+                </Box>
+              ))}
+            </FormGroup>
 
-            {/* Upload Constraints */}
-            <Box>
-              <input
-                type="file"
-                accept=".csv,.xlsx"
-                style={{ display: 'none' }}
-                id="constraints-upload"
-                onChange={(e) => handleFileUpload(e, 'constraints')}
-              />
-              <label htmlFor="constraints-upload">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<UploadFileIcon />}
-                  sx={{
-                    borderRadius: 99,
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 600,
-                    bgcolor: '#fff',
-                    borderColor: '#e0e0e0',
-                    color: '#222',
-                    textTransform: 'none',
-                    '&:hover': {
-                      bgcolor: '#f4f6f8',
-                      borderColor: '#bdbdbd'
-                    }
-                  }}
-                >
-                  Upload Constraints
-                </Button>
-              </label>
-              {constraintsFile && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Selected: {constraintsFile.name}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-
-          {/* Progress bar and elapsed time */}
-          {loading && (
-            <Box sx={{ width: '100%', mb: 2 }}>
-              <LinearProgress />
-              <Typography variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                In progress... {elapsed}s elapsed
-              </Typography>
-            </Box>
-          )}
-
-          {/* Analysis Input Section */}
-          <form onSubmit={handleSubmit} style={{ width: '100%' }}>
             <TextField
+              label="Total Budget"
+              type="number"
+              value={totalBudget}
+              onChange={(e) => setTotalBudget(e.target.value)}
               fullWidth
+              sx={{ mb: 2 }}
+              required
+              inputProps={{ min: 0 }}
+            />
+            <TextField
+              label="Additional Constraints or Information"
               multiline
-              rows={4}
-              variant="outlined"
-              placeholder="Enter your budget optimization requirements..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              sx={{ mb: 2, bgcolor: '#fff', borderRadius: 2 }}
+              minRows={2}
+              value={additional}
+              onChange={(e) => setAdditional(e.target.value)}
+              fullWidth
+              sx={{ mb: 2 }}
+              placeholder="E.g. Minimum spend per channel, target audience, etc."
             />
             <Button
               type="submit"
               variant="contained"
               color="primary"
-              disabled={loading || !input.trim()}
+              disabled={
+                loading ||
+                selectedTasks.length === 0 ||
+                !totalBudget ||
+                selectedChannels.length === 0
+              }
               sx={{
                 borderRadius: 99,
                 px: 4,
@@ -413,9 +416,15 @@ const BudgetOptimisation: React.FC = () => {
             >
               {loading ? <CircularProgress size={24} /> : 'Optimise Budget'}
             </Button>
+            {loading && (
+              <Box sx={{ width: '100%', mt: 2 }}>
+                <LinearProgress />
+                <Typography variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                  In progress... {elapsed}s elapsed
+                </Typography>
+              </Box>
+            )}
           </form>
-
-          {/* Show time elapsed after run is complete */}
           {!loading && lastElapsed !== null && result && (
             <Typography
               variant="caption"
@@ -447,18 +456,13 @@ const BudgetOptimisation: React.FC = () => {
                 size="small"
                 startIcon={<DownloadIcon />}
                 onClick={() => {
-                  // Create a blob from the result
                   const blob = new Blob([result], { type: 'text/plain' });
-                  // Create a URL for the blob
                   const url = URL.createObjectURL(blob);
-                  // Create a temporary anchor element
                   const a = document.createElement('a');
                   a.href = url;
                   a.download = 'budget-allocation-report.txt';
-                  // Trigger the download
                   document.body.appendChild(a);
                   a.click();
-                  // Clean up
                   document.body.removeChild(a);
                   URL.revokeObjectURL(url);
                 }}
@@ -471,7 +475,9 @@ const BudgetOptimisation: React.FC = () => {
                 Download Report
               </Button>
             </Box>
-            {renderFormattedResult(result)}
+            
+            {/* Use the new table renderer */}
+            <RenderResult content={result} />
           </Paper>
         </Box>
       )}
